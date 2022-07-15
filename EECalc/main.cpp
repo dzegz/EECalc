@@ -14,12 +14,13 @@ using namespace std::complex_literals;
 
 const double PI = std::acos(-1);
 const double w = 2 * 50 * PI;
-
+double prva, treca;
+std::complex<double> druga, cetvrta;
 std::complex<double> a = std::exp(1i * (2. / 3. * PI));
 
 //combo boxovi - izbornici
 
-GtkWidget* tranMjerenje, * potSpoj, * tranSpoj, *tipKvar;
+GtkWidget* tranMjerenje, * potSpoj, * tranSpoj, *tipKvar, *kondSpoj;
 
 // prozori
 
@@ -34,7 +35,8 @@ GtkWidget* unosLinR0, * unosLinR1, * unosLinX0, * unosLinX1, * unosLinC0, * unos
 GtkWidget* unosGenLinNap, * unosGenFi, * unosGenR, * unosGenX, * unosf_x, * unosf_y, * unosfi_x, * unosfi_y;
 GtkWidget* unosPotZ1, * unosPotZ2, * unosPotZ3, * unosPotZg, * unosTranNomSn, *unosTranNomPr, *unosTranNomSek;
 GtkWidget* unosTranUk0, * unosTranUk1, * unosTranPcu0, * unosTranPcu1, * unosTranPfe0, * unosTranPfe1, * unosTranI00, * unosTranI01, * unosTranC, * unosTranZgi, * unosTranZgj;
-GtkWidget* unosKvarZ;
+GtkWidget* unosKvarZ, *unosKvarL;
+GtkWidget* unosKondC;
 
 // ostalo
 
@@ -45,8 +47,10 @@ GtkWidget* win;
 char pngPathName[512];
 char filePathName[512];
 double graphData[1000][10];
-bool empty = true;
+bool fault = true;
 
+VectorXcd naponiCvorova(12);
+//naponiCvorova.resize(9,1);
 
 MatrixXcd xfmr_model_phi_equiv(Matrix2cd y0, Matrix2cd y1, Matrix2cd y2) {
     MatrixXcd y;
@@ -91,7 +95,7 @@ Matrix2cd xfmr_model_symm_12(int  c, std::complex<double> zs1, std::complex<doub
         -std::pow(zs1, -1), std::pow(zs1, -1) + ysh1 * 0.5;
 
     if (x == 1) return T.conjugate() * yx * T;
-    else if (x == 2) return T2.conjugate() * yx * T2;
+    return T2.conjugate() * yx * T2;
 
 }
 Matrix2cd xfmr_model_symm_0(int  c, std::complex<double> zs0, std::complex<double> ysh0, std::complex<double> zgi, std::complex<double> zgj, std::string side, double zb1, double  zb2) {
@@ -188,6 +192,7 @@ Matrix3cd breakageModel(std::vector<std::string> type, std::complex<double> z, d
             f(2, 2) += std::pow(z, -1);
         }
     }
+    f *= zb;
     return f;
 
 }
@@ -206,7 +211,7 @@ Matrix3cd loadModel(std::string type, std::complex<double> za, std::complex<doub
             -std::pow(zc, -1), -std::pow(zb, -1), std::pow(zc, -1) + std::pow(zb, -1);
         return r;
     }
-    else if (type.compare("star") == 0) {
+    else{
         r << za + zg, zg, zg,
             zg, zb + zg, zg,
             zg, zg, zc + zg;
@@ -379,7 +384,7 @@ void evaluteFun(double* min, double* max)
 */
 static void brisi(int width, int height)
 {
-    empty = true;
+    //empty = true;
     gtk_widget_queue_draw(area);
     return;
 }
@@ -571,49 +576,51 @@ void calculate_results() {
     double R1 = dajEntryDbl(unosLinR1);
     double X0 = dajEntryDbl(unosLinX0);
     double X1 = dajEntryDbl(unosLinX1);
-    double C0 = dajEntryDbl(unosLinC0);
-    double C1 = dajEntryDbl(unosLinC1);
-    double l = dajEntryDbl(unosLinL);
+    double C0 = dajEntryDbl(unosLinC0)/1000000;
+    double C1 = dajEntryDbl(unosLinC1)/1000000;
+    double l = dajEntryDbl(unosLinL)*1000;
 
     //generator
-    double eg_ll = dajEntryDbl(unosGenLinNap);
+    double eg_ll = dajEntryDbl(unosGenLinNap)*1000;
     double fi = dajEntryDbl(unosGenFi);
     double rg = dajEntryDbl(unosGenR);
     double xg = dajEntryDbl(unosGenX);
 
     //transformator
-    double Sn = dajEntryDbl(unosTranNomSn);
-    double Uni = dajEntryDbl(unosTranNomPr);
-    double Unj = dajEntryDbl(unosTranNomSek);
+    double Sn = dajEntryDbl(unosTranNomSn)*1000000;
+    double Uni = dajEntryDbl(unosTranNomPr)*1000;
+    double Unj = dajEntryDbl(unosTranNomSek)*1000;
     double uk0 = dajEntryDbl(unosTranUk0);
     double uk1 = dajEntryDbl(unosTranUk1);
-    double pcu0 = dajEntryDbl(unosTranPcu0);
-    double pcu1 = dajEntryDbl(unosTranPcu1);
-    double pfe0 = dajEntryDbl(unosTranPfe0);
-    double pfe1 = dajEntryDbl(unosTranPfe1);
+    double pcu0 = dajEntryDbl(unosTranPcu0)*1000;
+    double pcu1 = dajEntryDbl(unosTranPcu1)*1000;
+    double pfe0 = dajEntryDbl(unosTranPfe0)*1000;
+    double pfe1 = dajEntryDbl(unosTranPfe1)*1000;
     double i00 = dajEntryDbl(unosTranI00);
     double i01 = dajEntryDbl(unosTranI01);
-    double satni_broj = dajEntryDbl(unosTranC);
+    int satni_broj = dajEntryInt(unosTranC);
     std::complex<double> zgi = dajEntryCmplx(unosTranZgi);
     std::complex<double> zgj = dajEntryCmplx(unosTranZgj);
 
     bool pokus_primar = true;
-    if (dajIzbor(tranSpoj) == "YD") {
+    if (dajIzbor(tranSpoj) == "2") { //YD
         zgj = std::complex<double>(-1, 0);
     }
-    else if (dajIzbor(tranSpoj) == "DY") {
+    else if (dajIzbor(tranSpoj) == "3") { //DY
         zgi = std::complex<double>(-1, 0);
         pokus_primar = false;
     }
 
     //potrosac
-    double Z1 = dajEntryDbl(unosPotZ1);
-    double Z2 = dajEntryDbl(unosPotZ2);
-    double Z3 = dajEntryDbl(unosPotZ3);
-    double Zg = dajEntryDbl(unosPotZg);
+    std::complex<double> Z1 = dajEntryCmplx(unosPotZ1);
+    std::complex<double> Z2 = dajEntryCmplx(unosPotZ2);
+    std::complex<double> Z3 = dajEntryCmplx(unosPotZ3);
+    std::complex<double> Zg = dajEntryCmplx(unosPotZg);
 
     //ostalo
-    std::complex<double> kvarZ = dajEntryCmplx(unosKvarZ);
+    std::complex<double> Zf = dajEntryCmplx(unosKvarZ);
+    double udaljenostKvar = dajEntryDbl(unosKvarL)*1000;
+    double kondC = dajEntryDbl(unosKondC)/1000000000;
 
     //-------------------------------------------------------------------------------
     // racun    
@@ -633,27 +640,37 @@ void calculate_results() {
     auto yg = generatorAdmittance(rg, xg, bv1(2));
     auto eg = generatorVoltage(eg_ll, fi, bv1(0));
     auto ig = yg * eg;
-    //// test lineModel, svi PI ekv linije idu preko ove funcije  
+
+    //// linija ako kvar nije prisutan
     auto yl = lineModel(R0,X0,R1,X1,C0,C1,l,bv2(2));
 
-    ////test loadModel, kondenzator i potročaš ide preko ovoga,
-    // GtkWidget* tranMjerenje, * potSpoj, * tranSpoj;
-    Matrix3cd yc1, yc2;
-    if (dajIzbor(potSpoj) == "Trokut") {
-        yc1 = loadModel("delta", Z1, Z2, Z3, Zg, bv2(2));
+    //linija ako je prisutan kvar
+    auto yl1 = lineModel(R0, X0, R1, X1, C0, C1, udaljenostKvar, bv2(2));
+    auto yl2 = lineModel(R0, X0, R1, X1, C0, C1, l-udaljenostKvar, bv2(2));
+
+    //potrosac
+    Matrix3cd yp, yc;
+    if (dajIzbor(potSpoj) == "2") { //trokut
+        yp = loadModel("delta", Z1, Z2, Z3, Zg, bv2(2));
     }
-    else yc2 = loadModel("star", Z1, Z2, Z3, Zg, bv2(2));
+    else yp = loadModel("star", Z1, Z2, Z3, Zg, bv2(2));
+
+    //kondenzator
+    if (dajIzbor(kondSpoj) == "2") { //trokut
+        yc = loadModel("delta", std::complex<double>(0, std::pow(-w*kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
+    }
+    else yc = loadModel("star", std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
 
     // test parametara zs i ysh
     Vector2cd p, p2;
     Matrix2cd y, y2, yy, yyy;
     if (pokus_primar) {
-        p = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "i", bv1(2), bv2(2));
+        p = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "i", bv1(2), bv2(2)); // zs_x, ysh_x
         //test Yij_0
-        y = xfmr_model_symm_0(satni_broj, p(0), p(1), zgi, zgj, "i", bv1(2), bv2(2));
+        y = xfmr_model_symm_0(satni_broj, p(0), p(1), zgi, zgj, "i", bv1(2), bv2(2)); // Ytransf_0
         //test yij_12
-        yy = xfmr_model_symm_12(satni_broj, p(0), p(1), 1, "i");
-        yyy = xfmr_model_symm_12(satni_broj, p(0), p(1), 2, "i");
+        yy = xfmr_model_symm_12(satni_broj, p(0), p(1), 1, "i"); // Ytransf_1
+        yyy = xfmr_model_symm_12(satni_broj, p(0), p(1), 2, "i"); // Ytransf_2
     }
     else {
         p2 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "j", bv1(2), bv2(2));
@@ -666,64 +683,59 @@ void calculate_results() {
 
 
     //pi ekv trafoa
-    auto Y = xfmr_model_phi_equiv(y, yy, yyy);
+    auto Yt = xfmr_model_phi_equiv(y, yy, yyy); //Ytransf11, Ytransf12, Ytransf21, Ytransf22
 
     //funkcija breakageModel za model yf
     //breakageModel(std::vector<std::string> type, std::complex<double> z, double zb) {
     std::vector<std::string> kvarovi;
+    fault = true;
     if (dajIzbor(unosKvarZ) == "1") {
-
-    }
-    else if (dajIzbor(unosKvarZ) == "1") {
-
+        kvarovi.push_back(std::string("ab"));
     }
     else if (dajIzbor(unosKvarZ) == "2") {
-
+        kvarovi.push_back(std::string("bc"));
     }
     else if (dajIzbor(unosKvarZ) == "3") {
-
+        kvarovi.push_back(std::string("ac"));
     }
     else if (dajIzbor(unosKvarZ) == "4") {
-
+        kvarovi.push_back(std::string("a0"));
     }
-    else if (dajIzbor(unosKvarZ) == "5) {
-
+    else if (dajIzbor(unosKvarZ) == "5") {
+        kvarovi.push_back(std::string("b0"));
     }
     else if (dajIzbor(unosKvarZ) == "6") {
-
+        kvarovi.push_back(std::string("c0"));
+    }
+    else {
+        fault = false;
     }
 
-    kvarovi.push_back(std::string("ab"));
-
-    //if nema kvara
-            /*Matrix3cd zm = Matrix3cd::Constant(0);
-            Vector3cd zv = Vector3cd::Constant(0);
-
-
-            MatrixXcd Y; Y.resize(9, 9);
-            VectorXcd I; I.resize(9);
-            I << ig, zv, -ip;
-            Y << yg + y12.block(0, 0, 3, 3), y12.block(0, 3, 3, 3), zm,
-                y12.block(3, 0, 3, 3), y12.block(3, 3, 3, 3) + y23.block(0, 0, 3, 3), y23.block(0, 3, 3, 3),
-                zm, y23.block(3, 0, 3, 3), y23.block(3, 3, 3, 3) + yc;
-            v = Y.inverse() * I;*/
-
-            // if ima kvara 
-                /*  Matrix3cd zm = Matrix3cd::Constant(0);
-                    Vector3cd zv = Vector3cd::Constant(0);
-
-
-                    MatrixXcd Y; Y.resize(12, 12);
-                    VectorXcd I; I.resize(12);
-                    I << ig, zv, zv, -ip; //ovjde nema struja kod cvora potrošača jer zadajemo preko impedanse beli
-                    Y << yg + y12.block(0, 0, 3, 3), y12.block(0, 3, 3, 3), zm,zm,
-                        y12.block(3, 0, 3, 3), y12.block(3, 3, 3, 3) + y24.block(0, 0, 3, 3), y24.block(0, 3, 3, 3), zm,
-                        zm, y24.block(3, 0, 3, 3),  y24.block(3, 3, 3, 3) + y43.block(0,0,3,3) + yf, y43.block(0,3,3,3)
-                        zm ,zm, y43.block(), y43.block(3, 3, 3, 3) + yc;
-                    v = Y.inverse() * I;*/
-
-                    // skontat jos kako iz guija proslijeđivat parametre ovim funkcijama i jos jedno hiljadu stvari 
-
+    Matrix3cd yf;
+    if(fault) yf = breakageModel(kvarovi, Zf, bv2(2));
+    
+    Matrix3cd zm = Matrix3cd::Constant(0);
+    Vector3cd zv = Vector3cd::Constant(0);
+    
+    if (!fault) {
+        MatrixXcd Y; Y.resize(9, 9);
+        VectorXcd I; I.resize(9);
+        I << ig, zv, zv;
+        Y << yg + Yt.block(0, 0, 3, 3), Yt.block(0, 3, 3, 3), zm,
+            Yt.block(3, 0, 3, 3), Yt.block(3, 3, 3, 3) + yl.block(0, 0, 3, 3), yl.block(0, 3, 3, 3),
+            zm, yl.block(3, 0, 3, 3), yl.block(3, 3, 3, 3) + yc + yp;
+        naponiCvorova = Y.inverse() * I;
+    }
+    else {// if ima kvara
+        MatrixXcd Y; Y.resize(12, 12);
+        VectorXcd I; I.resize(12);
+        I << ig, zv, zv, zv; //ovjde nema struja kod cvora potrošača jer zadajemo preko impedanse beli
+        Y << yg + Yt.block(0, 0, 3, 3), Yt.block(0, 3, 3, 3), zm, zm,
+            Yt.block(3, 0, 3, 3), Yt.block(3, 3, 3, 3) + yl1.block(0, 0, 3, 3), yl1.block(0, 3, 3, 3), zm,
+            zm, yl1.block(3, 0, 3, 3), yl1.block(3, 3, 3, 3) + yl2.block(0, 0, 3, 3) + yf, yl2.block(0, 3, 3, 3),
+            zm, zm, yl2.block(3, 0, 3, 3), yl2.block(3, 3, 3, 3) + yc + yp;
+        naponiCvorova = Y.inverse() * I;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -736,9 +748,35 @@ static void results_close(GtkButton* btn, gpointer user_data) {
     gtk_window_destroy(tempWin);
 }
 
-void results_show(GtkWidget* p_widget, gpointer user_data) { //odbaci
+void results_show(GtkWidget* p_widget, gpointer user_data) { 
+    prva = dajEntryDbl(unosGenLinNap);
+    druga = dajEntryCmplx(unosPotZ1);
+    treca = dajEntryDbl(unosTranC);
+    cetvrta = dajEntryCmplx(unosTranZgi);
+   /*/ if (dajIzbor(unosKvarZ) == 1) {
+        prva = 1;
+    }
+    else if (dajIzbor(unosKvarZ) == 2) {
+        prva = 2;
+    }
+    else if (dajIzbor(unosKvarZ) == 3) {
+        prva = 3;
+    }
+    else if (dajIzbor(unosKvarZ) == 4) {
+        prva = 4;
+    }
+    else if (dajIzbor(unosKvarZ) == 5) {
+        prva = 5;
+    }
+    else if (dajIzbor(unosKvarZ) == 6) {
+        prva = 6;
+    }
+    else {
+        prva = 7;
+    }*/
     
-    empty = false; //zastarilo
+    naponiCvorova = VectorXcd::Constant(12,0);
+    //calculate_results();
     //gtk_widget_queue_draw(area);
     GApplication* app = G_APPLICATION(user_data);
     
@@ -779,22 +817,51 @@ void results_show(GtkWidget* p_widget, gpointer user_data) { //odbaci
     gtk_grid_attach(GTK_GRID(rezGrid), textRezultati, 0, i, 2, 2);
     i += 2;
 
-    GtkWidget* labelcina, * drugalab;
-    labelcina = gtk_label_new("Placeholder texttic");
-    drugalab = gtk_label_new("Proba samo takva");
-    gtk_grid_attach(GTK_GRID(rezGrid), labelcina, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(rezGrid), drugalab, 2, i++, 1, 1);
-    
+    GtkWidget* nc1, * nc2, *nc3, *nc4;
+    gchar* display;
+
+    nc1 = gtk_label_new("Napon V1 | | | | ");
+    display = g_strdup_printf("Napon V1 | %f + i%f V | %f + i%f V | %f + i%f V | %f",
+        naponiCvorova(0).real(), naponiCvorova(0).imag(), naponiCvorova(1).real(), naponiCvorova(1).imag(), naponiCvorova(2).real(), naponiCvorova(2).imag(), prva);       
+    gtk_label_set_text(GTK_LABEL(nc1), display);
+    g_free(display);
+
+    nc2 = gtk_label_new("Napon V2 | | | | ");
+    display = g_strdup_printf("Napon V2 | %f + i%f V | %f + i%f V | %f + i%f V | %f + i%f",
+        naponiCvorova(3).real(), naponiCvorova(3).imag(), naponiCvorova(4).real(), naponiCvorova(4).imag(), naponiCvorova(5).real(), naponiCvorova(5).imag(), druga.real(), druga.imag());       
+    gtk_label_set_text(GTK_LABEL(nc2), display);
+    g_free(display);
+
+    nc3 = gtk_label_new("Napon V3 | | | | ");
+    display = g_strdup_printf("Napon V3 | %f + i%f V | %f + i%f V | %f + i%f V | %f",
+        naponiCvorova(6).real(), naponiCvorova(6).imag(), naponiCvorova(7).real(), naponiCvorova(7).imag(), naponiCvorova(8).real(), naponiCvorova(8).imag(), treca);      
+    gtk_label_set_text(GTK_LABEL(nc3), display);
+    g_free(display);
+
+    nc4 = gtk_label_new("Napon V4 | | | | ");
+    display = g_strdup_printf("Napon V4 | %f + i%f V | %f + i%f V | %f + i%f V | %f + i%f\n",
+        naponiCvorova(9).real(), naponiCvorova(9).imag(), naponiCvorova(10).real(), naponiCvorova(10).imag(), naponiCvorova(11).real(), naponiCvorova(11).imag(), cetvrta.real(), cetvrta.imag());    
+    gtk_label_set_text(GTK_LABEL(nc4), display);
+    g_free(display);
+
+   
+    gtk_grid_attach(GTK_GRID(rezGrid), nc1, 0, i++, 1,1);
+    gtk_grid_attach(GTK_GRID(rezGrid), nc2, 0, i++, 1,1);
+    gtk_grid_attach(GTK_GRID(rezGrid), nc3, 0, i++, 1,1);
+    gtk_grid_attach(GTK_GRID(rezGrid), nc4, 0, i++, 1,1);
+    i++;
     btnZatvoriRez = gtk_button_new_with_label("Zatvori");
     //gtk_window_set_child(GTK_WINDOW(rezWin), btnZatvoriRez); 
-    gtk_grid_attach(GTK_GRID(rezGrid), btnZatvoriRez, 1, i++, 1, 1);
+    gtk_grid_attach(GTK_GRID(rezGrid), btnZatvoriRez, 0, i++, 2, 2);
     g_signal_connect(btnZatvoriRez, "clicked", G_CALLBACK(results_close),  rezWin);
     
-
     //------------------
     gtk_window_present(GTK_WINDOW(rezWin));
     gtk_widget_show(rezWin);
     
+    if (!fault) {
+        gtk_widget_hide(nc4);
+    }
     
 
 }
@@ -1006,7 +1073,7 @@ static void app_activate(GApplication* app, gpointer user_data)
 
     GtkWidget* genLinNap, * linR0;
     genLinNap = gtk_label_new("Linijski napon generatora (kV) ");
-    linR0 = gtk_label_new("R0 = ");
+    linR0 = gtk_label_new("R0 ");
     unosGenLinNap = gtk_entry_new();
     unosLinR0 = gtk_entry_new();
     setEntryText(unosGenLinNap, "22.5", 4);
@@ -1018,7 +1085,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     
     GtkWidget* genFi, * linX0;
     genFi = gtk_label_new("Fazni pomak ");
-    linX0 = gtk_label_new("X0 = ");
+    linX0 = gtk_label_new("X0 ");
     unosGenFi = gtk_entry_new();
     unosLinX0 = gtk_entry_new();
     setEntryText(unosGenFi, "0", 4);
@@ -1029,8 +1096,8 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_grid_attach(GTK_GRID(grid), unosLinX0, 3, i++, 1, 1);
 
     GtkWidget* genR, * linR1;
-    genR = gtk_label_new("Realni dio impedanse generatora (mE)");
-    linR1 = gtk_label_new("R1 = ");
+    genR = gtk_label_new("Realni dio impedanse generatora ");
+    linR1 = gtk_label_new("R1 ");
     unosGenR = gtk_entry_new();
     unosLinR1 = gtk_entry_new();
     setEntryText(unosGenR, "0.5", 3);
@@ -1041,8 +1108,8 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_grid_attach(GTK_GRID(grid), unosLinR1, 3, i++, 1, 1);
        
     GtkWidget* genX, * linX1;
-    genX = gtk_label_new("Imaginarni dio impedanse generatora (mE)");
-    linX1 = gtk_label_new("X1 = ");
+    genX = gtk_label_new("Imaginarni dio impedanse generatora ");
+    linX1 = gtk_label_new("X1 ");
     unosGenX = gtk_entry_new();
     unosLinX1 = gtk_entry_new();
     setEntryText(unosGenX, "0.1", 3);
@@ -1070,7 +1137,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_grid_attach(GTK_GRID(grid), unosLinL, 3, i++, 1, 1);
 
     //------------------------------------------------------------------------
-    // TRANSFORMATOR & POTROSAC
+    // TRANSFORMATOR & POTROSAC/KOND BATERIJA
     //------------------------------------------------------------------------
 
     GtkWidget* textTransformator, * textPotrosac;
@@ -1092,11 +1159,12 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(potSpoj), "2", "Trokut");
     gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), 0);
 
-    GtkWidget* textTranSpoj;
+    GtkWidget* textTranSpoj, * textPotSpoj;
     textTranSpoj = gtk_label_new("Odaberite spoj ");
+    textPotSpoj = gtk_label_new("Odaberite spoj ");
     gtk_grid_attach(GTK_GRID(grid), textTranSpoj, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), tranSpoj, 1, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), textTranSpoj, 2, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), textPotSpoj, 2, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potSpoj, 3, i++, 1, 1);
 
     GtkWidget* tranNomSn, * potZ1;
@@ -1105,7 +1173,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosTranNomSn = gtk_entry_new();
     unosPotZ1 = gtk_entry_new();
     setEntryText(unosTranNomSn, "600", 3);
-    setEntryText(unosPotZ1, "0", 1);
+    setEntryText(unosPotZ1, "300,50", 6);
     gtk_grid_attach(GTK_GRID(grid), tranNomSn, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranNomSn, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potZ1, 2, i, 1, 1);
@@ -1117,7 +1185,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosTranNomPr = gtk_entry_new();
     unosPotZ2 = gtk_entry_new();
     setEntryText(unosTranNomPr, "22", 2);
-    setEntryText(unosPotZ2, "0", 1);
+    setEntryText(unosPotZ2, "350,80", 6);
     gtk_grid_attach(GTK_GRID(grid), tranNomPr, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranNomPr, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potZ2, 2, i, 1, 1);
@@ -1129,7 +1197,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosTranNomSek = gtk_entry_new();
     unosPotZ3 = gtk_entry_new();
     setEntryText(unosTranNomSek, "220", 3);
-    setEntryText(unosPotZ3, "0", 1);
+    setEntryText(unosPotZ3, "350,30", 6);
     gtk_grid_attach(GTK_GRID(grid), tranNomSek, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranNomSek, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potZ3, 2, i, 1, 1);
@@ -1147,7 +1215,24 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_grid_attach(GTK_GRID(grid), unosTranUk0, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potZg, 2, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosPotZg, 3, i++, 1, 1);
+   // i += 2;
 
+    GtkWidget* textKondBat;
+    textKondBat = gtk_label_new("\n\nPodaci o kondenzatorskoj bateriji");
+    gtk_grid_attach(GTK_GRID(grid), textKondBat, 2, i, 2, 2);
+    
+    //
+    /*kondSpoj = gtk_combo_box_text_new();
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "1", "Zvijezda");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "2", "Trokut");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), 0);
+
+    GtkWidget* textKondSpoj;
+    textKondSpoj = gtk_label_new("Odaberite spoj ");
+    gtk_grid_attach(GTK_GRID(grid), textKondSpoj, 2, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), kondSpoj, 3, i++, 1, 1);*/
+
+    //
     GtkWidget* tranPcu0;
     tranPcu0 = gtk_label_new("Pcu0 (kW) ");
     unosTranPcu0 = gtk_entry_new();
@@ -1168,20 +1253,33 @@ static void app_activate(GApplication* app, gpointer user_data)
     setEntryText(unosTranPfe0, "3", 1);
     gtk_grid_attach(GTK_GRID(grid), tranPfe0, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranPfe0, 1, i++, 1, 1);
+    
+    kondSpoj = gtk_combo_box_text_new();
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "1", "Zvijezda");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "2", "Trokut");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), 0);
 
-    GtkWidget* tranUk1;
+    GtkWidget* tranUk1, *textKondSpoj;
     tranUk1 = gtk_label_new("uk1 (%) ");
+    textKondSpoj = gtk_label_new("Odaberite spoj ");
     unosTranUk1 = gtk_entry_new();
     setEntryText(unosTranUk1, "10", 2);
     gtk_grid_attach(GTK_GRID(grid), tranUk1, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosTranUk1, 1, i++, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), unosTranUk1, 1, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), textKondSpoj, 2, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), kondSpoj, 3, i++, 1, 1);
 
-    GtkWidget* tranPcu1;
+    GtkWidget* tranPcu1, *kondC;
     tranPcu1 = gtk_label_new("Pcu1 (kW) ");
+    kondC = gtk_label_new("C (nF) ");
     unosTranPcu1 = gtk_entry_new();
+    unosKondC = gtk_entry_new();
     setEntryText(unosTranPcu1, "7", 1);
+    setEntryText(unosKondC, "200", 3);
     gtk_grid_attach(GTK_GRID(grid), tranPcu1, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosTranPcu1, 1, i++, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), unosTranPcu1, 1, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), kondC, 2, i, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), unosKondC, 3, i++, 1, 1);
 
     GtkWidget* tranI01;
     tranI01 = gtk_label_new("I01 (%) ");
@@ -1236,7 +1334,8 @@ static void app_activate(GApplication* app, gpointer user_data)
 
         GtkWidget* textOstalo;
         textOstalo = gtk_label_new("\n\nOSTALO\n");
-        gtk_grid_attach(GTK_GRID(grid), textOstalo, 1, i++, 2, 2);
+        gtk_grid_attach(GTK_GRID(grid), textOstalo, 1, i, 2, 2);
+        i += 2;
 
         tipKvar = gtk_combo_box_text_new();
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "1", "Faze 1-2");
@@ -1245,6 +1344,7 @@ static void app_activate(GApplication* app, gpointer user_data)
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "4", "Faza 1-masa");
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "5", "Faza 2-masa");
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "6", "Faza 3-masa");
+        gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "7", "NEMA KVARA");
         gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), 0);
 
         GtkWidget* textKvar;
@@ -1255,9 +1355,16 @@ static void app_activate(GApplication* app, gpointer user_data)
         GtkWidget* kvarZ;
         kvarZ = gtk_label_new("Impedansa kvara ");
         unosKvarZ = gtk_entry_new();
-        setEntryText(unosTranZgj, "1,0", 3);
+        setEntryText(unosKvarZ, "1,0", 3);
         gtk_grid_attach(GTK_GRID(grid), kvarZ, 0, i, 1, 1);
         gtk_grid_attach(GTK_GRID(grid), unosKvarZ, 1, i++, 1, 1);
+
+        GtkWidget* kvarL;
+        kvarL = gtk_label_new("Udaljenost kvara (km) ");
+        unosKvarL = gtk_entry_new();
+        setEntryText(unosKvarL, "2", 1);
+        gtk_grid_attach(GTK_GRID(grid), kvarL, 0, i, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), unosKvarL, 1, i++, 1, 1);
 
         
     /*
