@@ -1,4 +1,5 @@
 ﻿#include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -9,7 +10,11 @@
 
 using namespace Eigen;
 using namespace std::complex_literals;
+
+// predefinicija vrijednosti izbornika
+
 int izborKvar = 6, izborTranSpoj = 0, izborPotSpoj = 1, izborKondSpoj = 1;
+
 // konstante
 
 const double PI = std::acos(-1);
@@ -41,14 +46,20 @@ GtkWidget* unosKondC;
 GtkWidget* colorBtnX, *colorBtnY;
 GtkWidget* btnExpTxt;
 GtkWidget* win;
+bool fault = true;
+VectorXcd naponiCvorova(12);
+
+// ucitavanje i snimanje podataka
+
 char txtPathName[512];
 char filePathName[512];
 double TextData[1000][10];
 double DataText[1000][10];
-bool fault = true;
 
-VectorXcd naponiCvorova(12);
-//naponiCvorova.resize(9,1);
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// FUNKCIJE ZA PRORACUN
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
 MatrixXcd xfmr_model_phi_equiv(Matrix2cd y0, Matrix2cd y1, Matrix2cd y2) {
     MatrixXcd y;
@@ -67,9 +78,8 @@ MatrixXcd xfmr_model_phi_equiv(Matrix2cd y0, Matrix2cd y1, Matrix2cd y2) {
     y.block(3, 3, 3, 3) = Ti * Vector3cd(y0(1, 1), y1(1, 1), y2(1, 1)).asDiagonal() * T;
 
     return y;
-
-
 }
+
 Matrix2cd xfmr_model_symm_12(int  c, std::complex<double> zs1, std::complex<double> ysh1, int x, std::string side) {
     std::complex<double> nc = std::exp(1i * (c * PI / 6.));
 
@@ -96,6 +106,7 @@ Matrix2cd xfmr_model_symm_12(int  c, std::complex<double> zs1, std::complex<doub
     return T2.conjugate() * yx * T2;
 
 }
+
 Matrix2cd xfmr_model_symm_0(int  c, std::complex<double> zs0, std::complex<double> ysh0, std::complex<double> zgi, std::complex<double> zgj, std::string side, double zb1, double  zb2) {
     double zb;
     std::complex<double> nc = std::exp(1i * (c * PI / 6.)), zi;
@@ -133,6 +144,7 @@ Matrix2cd xfmr_model_symm_0(int  c, std::complex<double> zs0, std::complex<doubl
     return T.conjugate() * yx * T;
 
 }
+
 Vector2cd xfmr_sequence_params(double Uni, double Unj, double Sn, double uk, double Pcu, double i0, double Pfe, std::string side, double zb1, double zb2) {
     double Un, zb, zsm, rs, xs, yshm, gsh, bsh;
 
@@ -158,8 +170,6 @@ Vector2cd xfmr_sequence_params(double Uni, double Unj, double Sn, double uk, dou
 }
 
 Matrix3cd breakageModel(std::vector<std::string> type, std::complex<double> z, double zb) {
-    //ovdje kontam da je uredu da svaki kvar bude ista impedansa
-    //isto kontam da ce biti viska ova obrnuta provjera jer cemo tamo iz ček boksa uzimati kkvarove al nejse
     Matrix3cd f = Matrix3cd::Constant(0);
     for (int i = 0; i < type.size(); i++) {
         if (type.at(i).compare("ab") == 0 || type.at(i).compare("ba") == 0) {
@@ -194,6 +204,7 @@ Matrix3cd breakageModel(std::vector<std::string> type, std::complex<double> z, d
     return f;
 
 }
+
 Matrix3cd loadModel(std::string type, std::complex<double> za, std::complex<double> zb, std::complex<double> zc, std::complex<double> zg, double  zbase) {
    
     za /= zbase;
@@ -213,8 +224,8 @@ Matrix3cd loadModel(std::string type, std::complex<double> za, std::complex<doub
             zg, zg, zc + zg;
         return r.inverse();
     }
-
 }
+
 MatrixXcd lineModel(double r0, double x0, double r1, double x1, double c0, double c1, double l, double zb) {
     Matrix3cd T, Ti;
     T << 1, 1, 1,
@@ -241,17 +252,19 @@ MatrixXcd lineModel(double r0, double x0, double r1, double x1, double c0, doubl
     r.block(3, 0, 3, 3) = yij;
 
     return r;
-
 }
+
 Vector3cd generatorVoltage(double egll, double phase, double vb) {
     return egll / sqrt(3) * Vector3cd(1, a * a, a) * std::exp(1i * (phase * PI / 180.)) / vb;
 }
+
 Matrix3cd generatorAdmittance(double rg, double xg, double zb) {
     std::complex<double> zg(rg, xg);
     zg /= zb;
     return Vector3cd(1. / zg, 1. / zg, 1. / zg).asDiagonal();
 
 }
+
 Vector3d get_base_values(double sb, double vb) {
 
     double ib = sb / vb;
@@ -259,6 +272,10 @@ Vector3d get_base_values(double sb, double vb) {
 
     return Vector3d(vb, ib, zb);
 }
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// FUNKCIJE ZA MANIPULACIJU PODATAKA IZ ENTRY & COMBO BOXOVA
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
 const char* getEntryText(GtkWidget* pEntry)
 {
@@ -330,10 +347,16 @@ void setEntryCmplx(GtkWidget* pEntry, double real, double imag) {
     setEntryText(pEntry, tmp, n);
 }
 
-static void brisi(int width, int height)
-{
-    //varijable
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// BUTTON POZIVANE FUNKCIJE
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+
+static void brisi()
+{
+    //resetting
+    // 
     // prenosna linija
     setEntryDbl(unosLinR0, 0);
     setEntryDbl(unosLinR1, 0);
@@ -349,9 +372,10 @@ static void brisi(int width, int height)
     setEntryDbl(unosGenR, 0);
     setEntryDbl(unosGenX, 0);
 
+    //transformator
     izborTranSpoj = 0;
     gtk_combo_box_set_active(GTK_COMBO_BOX(tranSpoj), izborTranSpoj);
-    //transformator
+    
     setEntryDbl(unosTranNomSn, 0);
     setEntryDbl(unosTranNomPr, 0);
     setEntryDbl(unosTranNomSek, 0);
@@ -367,6 +391,7 @@ static void brisi(int width, int height)
     setEntryCmplx(unosTranZgi, 0, 0);
     setEntryCmplx(unosTranZgj, 0, 0);
 
+    //potrosac & kond. bat
     izborPotSpoj = 0;
     izborKondSpoj = 0;
     gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), izborPotSpoj);
@@ -378,11 +403,14 @@ static void brisi(int width, int height)
     setEntryCmplx(unosPotZ3, 0, 0);
     setEntryCmplx(unosPotZg, 0, 0);
 
+    // kvar
     izborKvar = 6;
     gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), izborKvar);
-    //ostalo
+    
     setEntryCmplx(unosKvarZ, 0, 0);
     setEntryDbl(unosKvarL, 0);
+
+    // kond. bat
     setEntryDbl(unosKondC, 0);
     
     return;
@@ -404,9 +432,8 @@ static void on_save_response(GtkNativeDialog* dialog, int response){
 
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-// EXPORTING DATA TO FILE 
+// SNIMANJE UNESENIH PODATAKA U .TXT
 //-------------------------------------------------------------------------------------------------------------------------------------------
-
 
 static void saveTxt()
 {    
@@ -483,7 +510,7 @@ static void saveTxt()
 
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-// READING FROM THE FILE 
+// CITANJE PODATAKA IZ .TXT
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
 static void on_open_response(GtkDialog* dialog, int response)
@@ -565,20 +592,19 @@ static void activate_open()
     GtkFileChooserNative* dlg;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
     dlg = gtk_file_chooser_native_new("Open file", (GtkWindow*) win, action, "_Open", "_Cancel");
-    g_signal_connect(dlg, "response",
-        G_CALLBACK(on_open_response),
-        NULL);
+    g_signal_connect(dlg, "response", G_CALLBACK(on_open_response), NULL);
     gtk_native_dialog_show((GtkNativeDialog*)dlg);
 }
 
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-// CALCULATIONS 
+// PRORACUN 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
 void calculate_results() {
-    //varijable
-
+    
+    // povlacenje varijabli
+    // 
     // prenosna linija
     double R0 = dajEntryDbl(unosLinR0);
     double R1 = dajEntryDbl(unosLinR1);
@@ -632,19 +658,19 @@ void calculate_results() {
 
     //-------------------------------------------------------------------------------
     // racun    
+    //-------------------------------------------------------------------------------
     
-    ////////////////////////////
     double sb = 1000000, v1b = Uni / sqrt(3), v2b = Unj / sqrt(3);
     //base values
     auto bv1 = get_base_values(sb, v1b);
     auto bv2 = get_base_values(sb, v2b);
 
-    ////model generatora
+    //model generatora
     auto yg = generatorAdmittance(rg, xg, bv1(2));
     auto eg = generatorVoltage(eg_ll, fi, bv1(0));
     auto ig = yg * eg;
 
-    //// linija ako kvar nije prisutan
+    //linija ako kvar nije prisutan
     auto yl = lineModel(R0,X0,R1,X1,C0,C1,l,bv2(2));
 
     //linija ako je prisutan kvar
@@ -658,7 +684,7 @@ void calculate_results() {
     }
     else yp = loadModel("star", Z1, Z2, Z3, Zg, bv2(2));
 
-    //kondenzator
+    //kond. bat.
     if (izborKondSpoj == 1) { //trokut
         yc = loadModel("delta", std::complex<double>(0, std::pow(-w*kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
     }
@@ -667,31 +693,31 @@ void calculate_results() {
     // test parametara zs i ysh
     Vector2cd p0, p1;
     Matrix2cd y, yy, yyy;
+
     if (pokus_primar) {
         p0 = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "i", bv1(2), bv2(2)); // zs_0, ysh_0
         p1 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "i", bv1(2), bv2(2)); // zs_1, ysh_1
-        //test Yij_0
+        
         y = xfmr_model_symm_0(satni_broj, p0(0), p0(1), zgi, zgj, "i", bv1(2), bv2(2)); // Ytransf_0
-        //test yij_12
+        
         yy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 1, "i"); // Ytransf_1
         yyy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 2, "i"); // Ytransf_2
     }
     else {
         p0 = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "j", bv1(2), bv2(2)); // zs_0, ysh_0
         p1 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "j", bv1(2), bv2(2)); // zs_1, ysh_1
-        //test Yij_0
+        
         y = xfmr_model_symm_0(satni_broj, p0(0), p0(1), zgi, zgj, "j", bv1(2), bv2(2));
-        //test yij_12
+        
         yy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 1, "j");
         yyy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 2, "j");
     }
 
-
-    //pi ekv trafoa
+    //pi ekv transformatora
     auto Yt = xfmr_model_phi_equiv(y, yy, yyy); //Ytransf11, Ytransf12, Ytransf21, Ytransf22
 
-    //funkcija breakageModel za model yf
-    //breakageModel(std::vector<std::string> type, std::complex<double> z, double zb) {
+    //kvar
+
     std::vector<std::string> kvarovi;
     fault = true;
     if (izborKvar == 0) {
@@ -733,10 +759,10 @@ void calculate_results() {
         for (int i = 0; i < 3; i++) naponiCvorova(i) *= v1b;
         for (int i = 3; i < 9; i++) naponiCvorova(i) *= v2b;
     }
-    else {// if ima kvara
+    else {
         MatrixXcd Y; Y.resize(12, 12);
         VectorXcd I; I.resize(12);
-        I << ig, zv, zv, zv; //ovjde nema struja kod cvora potrošača jer zadajemo preko impedanse beli
+        I << ig, zv, zv, zv; 
         Y << yg + Yt.block(0, 0, 3, 3), Yt.block(0, 3, 3, 3), zm, zm,
             Yt.block(3, 0, 3, 3), Yt.block(3, 3, 3, 3) + yl1.block(0, 0, 3, 3), yl1.block(0, 3, 3, 3), zm,
             zm, yl1.block(3, 0, 3, 3), yl1.block(3, 3, 3, 3) + yl2.block(0, 0, 3, 3) + yf, yl2.block(0, 3, 3, 3),
@@ -748,9 +774,8 @@ void calculate_results() {
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-// RESULTS 
+// REZULTATI 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-
 
 static void results_close(GtkButton* btn, gpointer user_data) {
     GtkWindow* tempWin = GTK_WINDOW(user_data);
@@ -759,13 +784,10 @@ static void results_close(GtkButton* btn, gpointer user_data) {
 
 void results_show(GtkWidget* p_widget, gpointer user_data) { 
      
-    
-    //naponiCvorova = VectorXcd::Constant(12,0);
     calculate_results();
     
     GApplication* app = G_APPLICATION(user_data);
     
-    //gtk_button_released(p_widget);
     GtkWidget* rezWin;
     GtkWidget* rezMainVertBox, * rezBoxToolBar;
     rezMainVertBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5); //5px izmedju boxova
@@ -781,11 +803,7 @@ void results_show(GtkWidget* p_widget, gpointer user_data) {
     gtk_css_provider_load_from_data(rezCssProvider, "entry { min-height: 0pt; }", -1);
     gtk_style_context_add_provider_for_display(rezDisplay, GTK_STYLE_PROVIDER(rezCssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-    
     gtk_window_set_transient_for(GTK_WINDOW(rezWin), GTK_WINDOW(win));
-    //gtk_window_set_position(GTK_WINDOW(rezWin), GTK_WIN_POS_CENTER_ON_PARENT);
-    
-    //createToolBar(rezBoxToolBar);
 
     gtk_box_append((GtkBox*)rezMainVertBox, rezBoxToolBar);
 
@@ -794,7 +812,7 @@ void results_show(GtkWidget* p_widget, gpointer user_data) {
     gtk_window_set_child(GTK_WINDOW(rezWin), rezMainVertBox);
     gtk_box_append((GtkBox*)rezMainVertBox, rezGrid);
     
-    // SASTAV
+    // SADRZAJ
     int i = 0;
 
     GtkWidget* textRezultati, *btnZatvoriRez;
@@ -838,65 +856,81 @@ void results_show(GtkWidget* p_widget, gpointer user_data) {
     gtk_grid_attach(GTK_GRID(rezGrid), nc4, 0, i++, 1, 1); i++;
     i++;
     btnZatvoriRez = gtk_button_new_with_label("Zatvori");
-    //gtk_window_set_child(GTK_WINDOW(rezWin), btnZatvoriRez); 
     gtk_grid_attach(GTK_GRID(rezGrid), btnZatvoriRez, 0, i++, 2, 2);
     g_signal_connect(btnZatvoriRez, "clicked", G_CALLBACK(results_close),  rezWin);
     
-    //------------------
     gtk_window_present(GTK_WINDOW(rezWin));
     gtk_widget_show(rezWin);
     
-    if (!fault) {
+    if (!fault) { // skrivanje cvora 4 u slucaju nepostojanja kvara
         gtk_widget_hide(nc4);
     }
     
 
 }
 
-static void
-quit_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
+static void about_response(GtkWindow* parent, const char* title)
+{
+    GtkWidget* dialog, * label, * content_area;
+    GtkDialogFlags flags;
+
+    // Create the widgets
+    flags = GTK_DIALOG_DESTROY_WITH_PARENT;
+    dialog = gtk_dialog_new_with_buttons(title, parent, flags, ("_OK"), GTK_RESPONSE_NONE, NULL);
+    content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+
+
+    g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_window_destroy), dialog);
+
+    label = gtk_label_new("\n\n     Version v1.0b\n     Build date: July 17 2022\n     Authors: Dzelo Aldin, Imamovic Ahmed and Strika Faris\n     Emails: adzelo1@etf.unsa.ba | aimamovic6@etf.unsa.ba | fstrika1@etf.unsa.ba       \n\n");
+
+    gtk_box_append(GTK_BOX(content_area), label);
+    gtk_widget_show(dialog);
+}
+
+static void exit_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
 {
     GApplication* app = G_APPLICATION(user_data);
     g_application_quit(app);
 }
 
-static void
-test_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
+static void new_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
 {
-    printf("Test activated\n");
+    brisi();
 }
-static void
-edit_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
+static void about_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
 {
-    printf("Edit activated\n");
+    about_response((GtkWindow*)win, "EECalc | About");
+    //gtk_show_uri_full((GtkWindow*)win, "http://www.google.com", GDK_CURRENT_TIME);
 }
-static void
-view_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
+static void view_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data)
 {
     printf("View activated\n");
+    gtk_show_uri(NULL, "http://www.google.com", GDK_CURRENT_TIME);
 }
+
 
 
 static void createMenu(GApplication* app)
 {
     GMenu* menubar = g_menu_new();
     //prvi submenu
-    GSimpleAction* act_quit = g_simple_action_new("quit", NULL);
-    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_quit));
-    g_signal_connect(act_quit, "activate", G_CALLBACK(quit_activated), app);
+    GSimpleAction* act_exit = g_simple_action_new("exit", NULL);
+    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_exit));
+    g_signal_connect(act_exit, "activate", G_CALLBACK(exit_activated), app);
 
-    GSimpleAction* act_test = g_simple_action_new("test", NULL);
-    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_test));
-    g_signal_connect(act_test, "activate", G_CALLBACK(test_activated), app);
+    GSimpleAction* act_new = g_simple_action_new("new", NULL);
+    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_new));
+    g_signal_connect(act_new, "activate", G_CALLBACK(new_activated), app);
 
-    GMenuItem* menu_item_menu = g_menu_item_new("Menu", NULL);
+    GMenuItem* menu_item_menu = g_menu_item_new("File", NULL);
     GMenu* menu = g_menu_new();
 
-    GMenuItem* menu_item_test = g_menu_item_new("Test", "app.test");
+    GMenuItem* menu_item_test = g_menu_item_new("New ", "app.new");
     g_menu_append_item(menu, menu_item_test);
     g_object_unref(menu_item_test);
 
-    GMenuItem* menu_item_quit = g_menu_item_new("Quit", "app.quit");
+    GMenuItem* menu_item_quit = g_menu_item_new("Exit", "app.exit");
     g_menu_append_item(menu, menu_item_quit);
     g_object_unref(menu_item_quit);
     g_menu_item_set_submenu(menu_item_menu, G_MENU_MODEL(menu));
@@ -904,22 +938,22 @@ static void createMenu(GApplication* app)
     g_object_unref(menu_item_menu);
 
     //drugi submenu
-    GSimpleAction* act_edit = g_simple_action_new("edit", NULL);
-    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_edit));
-    g_signal_connect(act_edit, "activate", G_CALLBACK(edit_activated), app);
+    GSimpleAction* act_about = g_simple_action_new("about", NULL);
+    g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_about));
+    g_signal_connect(act_about, "activate", G_CALLBACK(about_activated), app);
 
     GSimpleAction* act_view = g_simple_action_new("view", NULL);
     g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(act_view));
     g_signal_connect(act_view, "activate", G_CALLBACK(view_activated), app);
 
-    GMenuItem* menu_item_editSB = g_menu_item_new("Edit SB", NULL);
+    GMenuItem* menu_item_editSB = g_menu_item_new("Help", NULL);
     GMenu* menu_editSB = g_menu_new();
 
-    GMenuItem* menu_item_edit = g_menu_item_new("Edit", "app.edit");
+    GMenuItem* menu_item_edit = g_menu_item_new("About", "app.about");
     g_menu_append_item(menu_editSB, menu_item_edit);
     g_object_unref(menu_item_edit);
 
-    GMenuItem* menu_item_view = g_menu_item_new("Test", "app.view");
+    GMenuItem* menu_item_view = g_menu_item_new("View", "app.view");
     g_menu_append_item(menu_editSB, menu_item_view);
     g_object_unref(menu_item_view);
 
@@ -972,8 +1006,8 @@ static void createToolBar(GtkWidget* boxToolBar)
 
     btnCrtaj = gtk_button_new_with_label("Izvrsi proracun");
     btnBrisi = gtk_button_new_with_label("Brisi");
-    btnExpTxt  = gtk_button_new_with_label("Save as .txt");
-    btnExit = gtk_button_new_with_label("Exit");
+    btnExpTxt  = gtk_button_new_with_label("Snimi podatke u .txt");
+    btnExit = gtk_button_new_with_label("Ucitaj podatke");
 
     GtkWidget* boxExport, * lblExport, * lblDraw, * lblDelete, * lblExit;
     GtkWidget* boxDraw, * boxDelete, * boxExit;
@@ -982,10 +1016,10 @@ static void createToolBar(GtkWidget* boxToolBar)
     boxDelete = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
     boxExit = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
 
-    lblExport = gtk_label_new("Export to .txt");
+    lblExport = gtk_label_new("Snimi podatke u .txt");
     lblDraw = gtk_label_new("Izvrsi proracun");
     lblDelete = gtk_label_new("Brisi");
-    lblExit = gtk_label_new("Open File");
+    lblExit = gtk_label_new("Ucitaj podatke");
     gtk_box_append((GtkBox*)boxDraw, imageDraw);
     gtk_box_append((GtkBox*)boxDraw, lblDraw);
     gtk_box_append((GtkBox*)boxDelete, imageDelete);
@@ -1324,7 +1358,7 @@ static void app_activate(GApplication* app, gpointer user_data)
 
         GtkWidget* textOstalo;
         textOstalo = gtk_label_new("\n\nOSTALO\n");
-        gtk_grid_attach(GTK_GRID(grid), textOstalo, 1, i, 2, 2);
+        gtk_grid_attach(GTK_GRID(grid), textOstalo, 0, i, 2, 1);
         i += 2;
 
         tipKvar = gtk_combo_box_text_new();
@@ -1338,7 +1372,6 @@ static void app_activate(GApplication* app, gpointer user_data)
         gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), 6);
 
         g_signal_connect(tipKvar, "changed", G_CALLBACK(dajIzborKvar), NULL);
-        
 
         GtkWidget* textKvar;
         textKvar = gtk_label_new("Odaberite tip kvara ");
@@ -1358,82 +1391,10 @@ static void app_activate(GApplication* app, gpointer user_data)
         setEntryText(unosKvarL, "2", 1);
         gtk_grid_attach(GTK_GRID(grid), kvarL, 0, i, 1, 1);
         gtk_grid_attach(GTK_GRID(grid), unosKvarL, 1, i++, 1, 1);
-
-        
-    /*
-
-    //klizac
-    GtkWidget* scaleX, * scaleY;
-    GtkAdjustment* adjustment1, * adjustment2;
-    adjustment1 = gtk_adjustment_new(0.5, 0.01, 100.0, 0.01, 15.0, 0.0);
-    scaleX = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, adjustment1);
-    gtk_scale_set_digits(GTK_SCALE(scaleX), 2);
-    gtk_scale_set_value_pos(GTK_SCALE(scaleX), GTK_POS_TOP);
-    gtk_scale_set_draw_value(GTK_SCALE(scaleX), TRUE);
-    gtk_grid_attach(GTK_GRID(grid), scaleX, 0, i, 2, 1);
-    void* s1 = 0;
-    g_signal_connect(scaleX, "value_changed", G_CALLBACK(scaleChanged), s1);
-
-
-    adjustment2 = gtk_adjustment_new(0.5, 0.01, 100.0, 0.01, 15.0, 0.0);
-    scaleY = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, adjustment2);
-    gtk_scale_set_digits(GTK_SCALE(scaleY), 2);
-    gtk_scale_set_value_pos(GTK_SCALE(scaleY), GTK_POS_TOP);
-    gtk_scale_set_draw_value(GTK_SCALE(scaleY), TRUE);
-    gtk_grid_attach(GTK_GRID(grid), scaleY, 2, i++, 2, 1);
-    s1 = (void*)1;
-    g_signal_connect(scaleY, "value_changed", G_CALLBACK(scaleChanged), s1);
-
-    GtkWidget* f_x, * f_y;
-    f_x = gtk_label_new("f_x = ");
-    f_y = gtk_label_new("f_y = ");
-    unosf_x = gtk_entry_new();
-    unosf_y = gtk_entry_new();
-    setEntryText(unosf_x, "50", 2);
-    setEntryText(unosf_y, "150", 3);
-    gtk_grid_attach(GTK_GRID(grid), f_x, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosf_x, 1, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), f_y, 2, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosf_y, 3, i++, 1, 1);
-
-    GtkWidget* fi_x, * fi_y;
-    fi_x = gtk_label_new("fi_x = ");
-    fi_y = gtk_label_new("fi_y = ");
-    unosfi_x = gtk_entry_new();
-    unosfi_y = gtk_entry_new();
-    gtk_grid_attach(GTK_GRID(grid), fi_x, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosfi_x, 1, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), fi_y, 2, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), unosfi_y, 3, i++, 1, 1);
-
-    GtkWidget* lblClrX, * lblClrY;
-    colorBtnX = gtk_color_button_new();
-    GdkRGBA clr;
-    clr.alpha = 1;
-    clr.red = 1;
-    clr.green = 0;
-    clr.blue = 0;
-    gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(colorBtnX), &clr);
-    colorBtnY = gtk_color_button_new();
-    clr.red = 0;
-    clr.green = 1;
-    gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(colorBtnY), &clr);
-    lblClrX = gtk_label_new("Boja: ");
-    lblClrY = gtk_label_new("Boja: ");
-    gtk_grid_attach(GTK_GRID(grid), lblClrX, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), colorBtnX, 1, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), lblClrY, 2, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), colorBtnY, 3, i++, 1, 1);
-
-    area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(area, 300, 300);
-    gtk_widget_set_vexpand(area, TRUE);
-    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(area), draw_function, NULL, NULL);
-
-    gtk_grid_attach(GTK_GRID(grid), area, 0, i++, 4, 1);*/
+       
     
     GtkWidget* label;
-    label = gtk_label_new("\n\n\n\n\n\n\nCopyright (c) 2022 ETF ");
+    label = gtk_label_new("\n\n\n\nCopyright (c) 2022 ETF ");
     gtk_grid_attach(GTK_GRID(grid), label, 1, i++, 2, 1);
 
     gtk_widget_show(win);
