@@ -9,13 +9,11 @@
 
 using namespace Eigen;
 using namespace std::complex_literals;
-
+int izborKvar = 6, izborTranSpoj = 0, izborPotSpoj = 1, izborKondSpoj = 1;
 // konstante
 
 const double PI = std::acos(-1);
 const double w = 2 * 50 * PI;
-double prva, treca;
-std::complex<double> druga, cetvrta;
 std::complex<double> a = std::exp(1i * (2. / 3. * PI));
 
 //combo boxovi - izbornici
@@ -288,9 +286,20 @@ void setEntryText(GtkWidget* pEntry, const char* text, int len)
     gtk_entry_buffer_set_text(buffer, text, (int)nch);
 }
 
+void dajIzborKvar(GtkWidget* Izbornik) {
+    izborKvar = gtk_combo_box_get_active(GTK_COMBO_BOX(Izbornik));
+}
 
-const char* dajIzbor(GtkWidget* Izbornik) {
-    return gtk_combo_box_get_active_id(GTK_COMBO_BOX(Izbornik));
+void dajIzborTran(GtkWidget* Izbornik) {
+    izborTranSpoj = gtk_combo_box_get_active(GTK_COMBO_BOX(Izbornik));
+}
+
+void dajIzborPot(GtkWidget* Izbornik) {
+    izborPotSpoj = gtk_combo_box_get_active(GTK_COMBO_BOX(Izbornik));
+}
+
+void dajIzborKond(GtkWidget* Izbornik) {
+    izborKondSpoj = gtk_combo_box_get_active(GTK_COMBO_BOX(Izbornik));
 }
 
 std::complex<double> dajEntryCmplx(GtkWidget* pEntry) {
@@ -322,150 +331,14 @@ void setEntryDbl(GtkWidget* pEntry, double val)
     int n = sprintf(tmp, "%.3f", val);
     setEntryText(pEntry, tmp, n);
 }
-/*
-void evaluteFun(double* min, double* max)
-{
-    if (fn1)
-        free(fn1);
-    if (fn2)
-        free(fn2);
-    if (fn3)
-        free(fn3);
-    int nX = dajEntryInt(unosGenFi);
-    fn1 = (double*)malloc(nX * sizeof(double));
-    fn2 = (double*)malloc(nX * sizeof(double));
-    fn3 = (double*)malloc(nX * sizeof(double));
-    double t0 = dajEntryDbl(unosGenLinNap);
-    double t1 = dajEntryDbl(unosLinR0);
 
-    double fx = dajEntryDbl(unosf_x);
-    double fy = dajEntryDbl(unosf_y);
-    double fi_x = dajEntryDbl(unosfi_x);
-    double fi_y = dajEntryDbl(unosfi_y);
-    double amplX = dajEntryDbl(unosGenR);
-    double amplY = dajEntryDbl(unosLinR1);
-    double deltaT = (t1 - t0) / nX;
-    double t = t0;
-    double m, M;
-    for (int i = 0; i < nX; i++)
-    {
-        double f1 = amplX * sin(2 * 3.14 * fx * t + fi_x);
-        fn1[i] = f1;
-        double f2 = amplY * sin(2 * 3.14 * fy * t + fi_y);
-        fn2[i] = f2;
-        double f3 = f1 + f2;
-        fn3[i] = f3;
-        if (i == 0)
-        {
-            m = fn1[0];
-            M = fn1[0];
-        }
-        else
-        {
-            if (m > f1)
-                m = f1;
-            if (M < f1)
-                M = f1;
-        }
-        if (m > f2)
-            m = f2;
-        if (M < f2)
-            M = f2;
-
-        if (m > f3)
-            m = f3;
-        if (M < f3)
-            M = f3;
-        t += deltaT;
-    }
-    *min = m;
-    *max = M;
-}
-*/
 static void brisi(int width, int height)
 {
     //empty = true;
     gtk_widget_queue_draw(area);
     return;
 }
-/*
-static void crtajFn(cairo_t* cr, double deltaT, double* f, int n, double linewidth, GdkRGBA* color, double pixel_t, double pixel_y, double maxY, int height)
-{
-    cairo_set_line_width(cr, linewidth);
-    //  cairo_set_source_rgb (cr, r, g, b);
-    gdk_cairo_set_source_rgba(cr, color);
 
-    double t = 0;
-    for (int i = 0; i < n; i++)
-    {
-        double xPixel = pixel_t * t;
-        double yPixel = pixel_y * (maxY - f[i]);// + height/2. - midPoint * pixel_y;
-        if (i == 0)
-            cairo_move_to(cr, xPixel, yPixel);
-        else
-            cairo_line_to(cr, xPixel, yPixel);
-        t += deltaT;
-
-    }
-    cairo_stroke(cr);
-}
-*/
-static void drawCoordinates(cairo_t* cr, double y, int width)
-{
-    cairo_set_line_width(cr, 1.0);
-    cairo_set_source_rgb(cr, 1, 1, 1);
-    cairo_move_to(cr, 0, y);
-    cairo_line_to(cr, width, y);
-    cairo_stroke(cr);
-}
-
-/*
-static void
-draw_function(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data)
-{
-    if (empty)
-        return;
-    //unos odgovarajucih parametara za iscrtavanje
-    double min, max;
-    evaluteFun(&min, &max);
-    double t0 = dajEntryDbl(unosGenLinNap);
-    double t1 = dajEntryDbl(unosLinR0);
-    double pixel_t = width / (t1 - t0);
-    double pixel_y = height / (max - min);
-    int n = dajEntryInt(unosGenFi);
-    double dt = (t1 - t0) / n;
-    double yZero = pixel_y * max;
-    drawCoordinates(cr, yZero, width);
-    GdkRGBA colorX;
-    gtk_color_chooser_get_rgba((GtkColorChooser*)colorBtnX, &colorX);
-    GdkRGBA colorY;
-    gtk_color_chooser_get_rgba((GtkColorChooser*)colorBtnY, &colorY);
-    GdkRGBA colorSum;
-    colorSum.alpha = 1;
-    float c = colorX.red + colorY.red;
-    if (c > 1)
-        c = 1;
-    colorSum.red = c;
-    c = colorX.green + colorY.green;
-    if (c > 1)
-        c = 1;
-    colorSum.green = c;
-    c = colorX.blue + colorY.blue;
-    if (c > 1)
-        c = 1;
-    colorSum.blue = c;
-    crtajFn(cr, dt, fn1, n, 1, &colorX, pixel_t, pixel_y, max, height);
-    crtajFn(cr, dt, fn2, n, 1, &colorY, pixel_t, pixel_y, max, height);
-    crtajFn(cr, dt, fn3, n, 1, &colorSum, pixel_t, pixel_y, max, height);
-    if (exportToPng)
-    {
-        cairo_surface_t* surface = cairo_get_target(cr);
-        cairo_surface_write_to_png(surface, pngPathName);
-
-        // cairo_surface_write_to_png (surface, "/Users/dzeni/Desktop/sine.png");
-        exportToPng = false;
-    }
-}*/
 
 static void
 on_save_response(GtkNativeDialog* dialog,
@@ -603,10 +476,10 @@ void calculate_results() {
     std::complex<double> zgj = dajEntryCmplx(unosTranZgj);
 
     bool pokus_primar = true;
-    if (dajIzbor(tranSpoj) == "2") { //YD
+    if (izborTranSpoj == 1) { //YD
         zgj = std::complex<double>(-1, 0);
     }
-    else if (dajIzbor(tranSpoj) == "3") { //DY
+    else if (izborTranSpoj == 2) { //DY
         zgi = std::complex<double>(-1, 0);
         pokus_primar = false;
     }
@@ -650,13 +523,13 @@ void calculate_results() {
 
     //potrosac
     Matrix3cd yp, yc;
-    if (dajIzbor(potSpoj) == "2") { //trokut
+    if (izborPotSpoj == 1) { //trokut
         yp = loadModel("delta", Z1, Z2, Z3, Zg, bv2(2));
     }
     else yp = loadModel("star", Z1, Z2, Z3, Zg, bv2(2));
 
     //kondenzator
-    if (dajIzbor(kondSpoj) == "2") { //trokut
+    if (izborKondSpoj == 1) { //trokut
         yc = loadModel("delta", std::complex<double>(0, std::pow(-w*kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
     }
     else yc = loadModel("star", std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
@@ -689,22 +562,22 @@ void calculate_results() {
     //breakageModel(std::vector<std::string> type, std::complex<double> z, double zb) {
     std::vector<std::string> kvarovi;
     fault = true;
-    if (dajIzbor(unosKvarZ) == "1") {
+    if (izborKvar == 0) {
         kvarovi.push_back(std::string("ab"));
     }
-    else if (dajIzbor(unosKvarZ) == "2") {
+    else if (izborKvar == 1) {
         kvarovi.push_back(std::string("bc"));
     }
-    else if (dajIzbor(unosKvarZ) == "3") {
+    else if (izborKvar == 2) {
         kvarovi.push_back(std::string("ac"));
     }
-    else if (dajIzbor(unosKvarZ) == "4") {
+    else if (izborKvar == 3) {
         kvarovi.push_back(std::string("a0"));
     }
-    else if (dajIzbor(unosKvarZ) == "5") {
+    else if (izborKvar == 4) {
         kvarovi.push_back(std::string("b0"));
     }
-    else if (dajIzbor(unosKvarZ) == "6") {
+    else if (izborKvar == 5) {
         kvarovi.push_back(std::string("c0"));
     }
     else {
@@ -725,6 +598,8 @@ void calculate_results() {
             Yt.block(3, 0, 3, 3), Yt.block(3, 3, 3, 3) + yl.block(0, 0, 3, 3), yl.block(0, 3, 3, 3),
             zm, yl.block(3, 0, 3, 3), yl.block(3, 3, 3, 3) + yc + yp;
         naponiCvorova = Y.inverse() * I;
+        for (int i = 0; i < 3; i++) naponiCvorova(i) *= v1b;
+        for (int i = 3; i < 9; i++) naponiCvorova(i) *= v2b;
     }
     else {// if ima kvara
         MatrixXcd Y; Y.resize(12, 12);
@@ -735,6 +610,8 @@ void calculate_results() {
             zm, yl1.block(3, 0, 3, 3), yl1.block(3, 3, 3, 3) + yl2.block(0, 0, 3, 3) + yf, yl2.block(0, 3, 3, 3),
             zm, zm, yl2.block(3, 0, 3, 3), yl2.block(3, 3, 3, 3) + yc + yp;
         naponiCvorova = Y.inverse() * I;
+        for (int i = 0; i < 3; i++) naponiCvorova(i) *= v1b;
+        for (int i = 3; i < 12; i++) naponiCvorova(i) *= v2b;
     }
 }
 
@@ -749,34 +626,10 @@ static void results_close(GtkButton* btn, gpointer user_data) {
 }
 
 void results_show(GtkWidget* p_widget, gpointer user_data) { 
-    prva = dajEntryDbl(unosGenLinNap);
-    druga = dajEntryCmplx(unosPotZ1);
-    treca = dajEntryDbl(unosTranC);
-    cetvrta = dajEntryCmplx(unosTranZgi);
-   /*/ if (dajIzbor(unosKvarZ) == 1) {
-        prva = 1;
-    }
-    else if (dajIzbor(unosKvarZ) == 2) {
-        prva = 2;
-    }
-    else if (dajIzbor(unosKvarZ) == 3) {
-        prva = 3;
-    }
-    else if (dajIzbor(unosKvarZ) == 4) {
-        prva = 4;
-    }
-    else if (dajIzbor(unosKvarZ) == 5) {
-        prva = 5;
-    }
-    else if (dajIzbor(unosKvarZ) == 6) {
-        prva = 6;
-    }
-    else {
-        prva = 7;
-    }*/
+     
     
-    naponiCvorova = VectorXcd::Constant(12,0);
-    //calculate_results();
+    //naponiCvorova = VectorXcd::Constant(12,0);
+    calculate_results();
     //gtk_widget_queue_draw(area);
     GApplication* app = G_APPLICATION(user_data);
     
@@ -821,34 +674,36 @@ void results_show(GtkWidget* p_widget, gpointer user_data) {
     gchar* display;
 
     nc1 = gtk_label_new("Napon V1 | | | | ");
-    display = g_strdup_printf("Napon V1 | %f + i%f V | %f + i%f V | %f + i%f V | %f",
-        naponiCvorova(0).real(), naponiCvorova(0).imag(), naponiCvorova(1).real(), naponiCvorova(1).imag(), naponiCvorova(2).real(), naponiCvorova(2).imag(), prva);       
+    display = g_strdup_printf("Naponi cvora 1 \n  %.2f < %.2f V \n  %.2f < %.2f V \n  %.2f < %.2f V\n",
+        std::abs(naponiCvorova(0)), std::arg(naponiCvorova(0))*180/PI, std::abs(naponiCvorova(1)), std::arg(naponiCvorova(1))*180/PI, std::abs(naponiCvorova(2)), std::arg(naponiCvorova(2))*180/PI);
     gtk_label_set_text(GTK_LABEL(nc1), display);
     g_free(display);
 
     nc2 = gtk_label_new("Napon V2 | | | | ");
-    display = g_strdup_printf("Napon V2 | %f + i%f V | %f + i%f V | %f + i%f V | %f + i%f",
-        naponiCvorova(3).real(), naponiCvorova(3).imag(), naponiCvorova(4).real(), naponiCvorova(4).imag(), naponiCvorova(5).real(), naponiCvorova(5).imag(), druga.real(), druga.imag());       
+    display = g_strdup_printf("Naponi cvora 2 \n  %.2f < %.2f V \n  %.2f < %.2f V \n  %.2f < %.2f V\n",
+        std::abs(naponiCvorova(3)), std::arg(naponiCvorova(3)) * 180 / PI, std::abs(naponiCvorova(4)), std::arg(naponiCvorova(4)) * 180 / PI, std::abs(naponiCvorova(5)), std::arg(naponiCvorova(5)) * 180 / PI);
     gtk_label_set_text(GTK_LABEL(nc2), display);
     g_free(display);
 
     nc3 = gtk_label_new("Napon V3 | | | | ");
-    display = g_strdup_printf("Napon V3 | %f + i%f V | %f + i%f V | %f + i%f V | %f",
-        naponiCvorova(6).real(), naponiCvorova(6).imag(), naponiCvorova(7).real(), naponiCvorova(7).imag(), naponiCvorova(8).real(), naponiCvorova(8).imag(), treca);      
+    display = g_strdup_printf("Naponi cvora 3 \n  %.2f < %.2f V \n  %.2f < %.2f V \n  %.2f < %.2f V\n",
+        std::abs(naponiCvorova(6)), std::arg(naponiCvorova(6)) * 180 / PI, std::abs(naponiCvorova(7)), std::arg(naponiCvorova(7)) * 180 / PI, std::abs(naponiCvorova(8)), std::arg(naponiCvorova(8)) * 180 / PI);
     gtk_label_set_text(GTK_LABEL(nc3), display);
     g_free(display);
 
     nc4 = gtk_label_new("Napon V4 | | | | ");
-    display = g_strdup_printf("Napon V4 | %f + i%f V | %f + i%f V | %f + i%f V | %f + i%f\n",
-        naponiCvorova(9).real(), naponiCvorova(9).imag(), naponiCvorova(10).real(), naponiCvorova(10).imag(), naponiCvorova(11).real(), naponiCvorova(11).imag(), cetvrta.real(), cetvrta.imag());    
-    gtk_label_set_text(GTK_LABEL(nc4), display);
-    g_free(display);
+    if (fault) {
+        display = g_strdup_printf("Naponi cvora 4 \n  %.2f < %.2f V \n  %.2f < %.2f V \n  %.2f < %.2f V\n",
+            std::abs(naponiCvorova(9)), std::arg(naponiCvorova(9)) * 180 / PI, std::abs(naponiCvorova(10)), std::arg(naponiCvorova(10)) * 180 / PI, std::abs(naponiCvorova(11)), std::arg(naponiCvorova(11)) * 180 / PI);
+        gtk_label_set_text(GTK_LABEL(nc4), display);
+        g_free(display);
+    }
 
    
-    gtk_grid_attach(GTK_GRID(rezGrid), nc1, 0, i++, 1,1);
-    gtk_grid_attach(GTK_GRID(rezGrid), nc2, 0, i++, 1,1);
-    gtk_grid_attach(GTK_GRID(rezGrid), nc3, 0, i++, 1,1);
-    gtk_grid_attach(GTK_GRID(rezGrid), nc4, 0, i++, 1,1);
+    gtk_grid_attach(GTK_GRID(rezGrid), nc1, 0, i++, 1, 1); i++;
+    gtk_grid_attach(GTK_GRID(rezGrid), nc2, 0, i++, 1, 1); i++;
+    gtk_grid_attach(GTK_GRID(rezGrid), nc3, 0, i++, 1, 1); i++;
+    gtk_grid_attach(GTK_GRID(rezGrid), nc4, 0, i++, 1, 1); i++;
     i++;
     btnZatvoriRez = gtk_button_new_with_label("Zatvori");
     //gtk_window_set_child(GTK_WINDOW(rezWin), btnZatvoriRez); 
@@ -1077,7 +932,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosGenLinNap = gtk_entry_new();
     unosLinR0 = gtk_entry_new();
     setEntryText(unosGenLinNap, "22.5", 4);
-    setEntryText(unosLinR0, "0.1", 3);
+    setEntryText(unosLinR0, "0.158", 5);
     gtk_grid_attach(GTK_GRID(grid), genLinNap, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosGenLinNap, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), linR0, 2, i, 1, 1);
@@ -1089,7 +944,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosGenFi = gtk_entry_new();
     unosLinX0 = gtk_entry_new();
     setEntryText(unosGenFi, "0", 4);
-    setEntryText(unosLinX0, "550", 3);
+    setEntryText(unosLinX0, "0.489", 5);
     gtk_grid_attach(GTK_GRID(grid), genFi, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosGenFi, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), linX0, 2, i, 1, 1);
@@ -1100,8 +955,8 @@ static void app_activate(GApplication* app, gpointer user_data)
     linR1 = gtk_label_new("R1 ");
     unosGenR = gtk_entry_new();
     unosLinR1 = gtk_entry_new();
-    setEntryText(unosGenR, "0.5", 3);
-    setEntryText(unosLinR1, "0.1", 4);
+    setEntryText(unosGenR, "0.0001", 6);
+    setEntryText(unosLinR1, "0.026", 5);
     gtk_grid_attach(GTK_GRID(grid), genR, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosGenR, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), linR1, 2, i, 1, 1);
@@ -1112,8 +967,8 @@ static void app_activate(GApplication* app, gpointer user_data)
     linX1 = gtk_label_new("X1 ");
     unosGenX = gtk_entry_new();
     unosLinX1 = gtk_entry_new();
-    setEntryText(unosGenX, "0.1", 3);
-    setEntryText(unosLinX1, "0.2", 3);
+    setEntryText(unosGenX, "0.0005", 6);
+    setEntryText(unosLinX1, "0.188", 5);
     gtk_grid_attach(GTK_GRID(grid), genX, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosGenX, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), linX1, 2, i, 1, 1);
@@ -1122,7 +977,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     GtkWidget* linC0, * linC1, *linL;
     linC0 = gtk_label_new("C0 (uF) ");
     linC1 = gtk_label_new("C1 (uF) ");
-    linL = gtk_label_new("duzina linije (km) ");
+    linL = gtk_label_new("Duzina linije (km) ");
     unosLinC0 = gtk_entry_new();
     unosLinC1 = gtk_entry_new();
     unosLinL = gtk_entry_new();
@@ -1153,11 +1008,13 @@ static void app_activate(GApplication* app, gpointer user_data)
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tranSpoj), "2", "YD");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tranSpoj), "3", "DY");
     gtk_combo_box_set_active(GTK_COMBO_BOX(tranSpoj), 0);
+    g_signal_connect(tranSpoj, "changed", G_CALLBACK(dajIzborTran), NULL);
     
     potSpoj = gtk_combo_box_text_new();
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(potSpoj), "1", "Zvijezda");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(potSpoj), "2", "Trokut");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), 0);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), 1);
+    g_signal_connect(potSpoj, "changed", G_CALLBACK(dajIzborPot), NULL);
 
     GtkWidget* textTranSpoj, * textPotSpoj;
     textTranSpoj = gtk_label_new("Odaberite spoj ");
@@ -1257,7 +1114,8 @@ static void app_activate(GApplication* app, gpointer user_data)
     kondSpoj = gtk_combo_box_text_new();
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "1", "Zvijezda");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(kondSpoj), "2", "Trokut");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), 0);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), 1);
+    g_signal_connect(kondSpoj, "changed", G_CALLBACK(dajIzborKond), NULL);
 
     GtkWidget* tranUk1, *textKondSpoj;
     tranUk1 = gtk_label_new("uk1 (%) ");
@@ -1275,7 +1133,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosTranPcu1 = gtk_entry_new();
     unosKondC = gtk_entry_new();
     setEntryText(unosTranPcu1, "7", 1);
-    setEntryText(unosKondC, "200", 3);
+    setEntryText(unosKondC, "1", 1);
     gtk_grid_attach(GTK_GRID(grid), tranPcu1, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranPcu1, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), kondC, 2, i, 1, 1);
@@ -1345,7 +1203,10 @@ static void app_activate(GApplication* app, gpointer user_data)
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "5", "Faza 2-masa");
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "6", "Faza 3-masa");
         gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(tipKvar), "7", "NEMA KVARA");
-        gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), 0);
+        gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), 6);
+
+        g_signal_connect(tipKvar, "changed", G_CALLBACK(dajIzborKvar), NULL);
+        
 
         GtkWidget* textKvar;
         textKvar = gtk_label_new("Odaberite tip kvara ");
