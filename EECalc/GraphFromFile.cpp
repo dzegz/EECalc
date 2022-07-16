@@ -40,12 +40,7 @@ void showData(GtkWindow* parent, const char* title, double A[1000][10], int nRow
 
     // Create the widgets
     flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-    dialog = gtk_dialog_new_with_buttons(title,
-        parent,
-        flags,
-        ("_OK"),
-        GTK_RESPONSE_NONE,
-        NULL);
+    dialog = gtk_dialog_new_with_buttons(title, parent, flags, ("_OK"), GTK_RESPONSE_NONE, NULL);
     content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
 
@@ -62,9 +57,36 @@ void showData(GtkWindow* parent, const char* title, double A[1000][10], int nRow
     char* pTmp = tmp;
     for (int i = 0; i < nRows; i++)
     {
+        if (i == 0) {
+            size_t tmpara = sprintf(pTmp, "\n\nGenerator podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+        else if (i == 4) {
+            size_t tmpara = sprintf(pTmp, "\n\nLinija podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+        else if (i == 11) {
+            size_t tmpara = sprintf(pTmp, "\n\nTransformator podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+        else if (i == 28) {
+            size_t tmpara = sprintf(pTmp, "\n\nPotrosac podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+        else if (i == 37) {
+            size_t tmpara = sprintf(pTmp, "\n\nKond. baterija podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+        else if (i == 39) {
+            size_t tmpara = sprintf(pTmp, "\n\nOstalo podaci: \n   ");
+            pTmp += tmpara; sprintf(pTmp, "\r\n");
+        }
+
+        
+
         for (int j = 0; j < nCols; j++)
         {
-            size_t nCh = sprintf(pTmp, "%.3f ", A[i][j]);
+            size_t nCh = sprintf(pTmp, " | %.2f |", A[i][j]);
             pTmp += nCh;
         }
         sprintf(pTmp, "\r\n");

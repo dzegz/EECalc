@@ -44,7 +44,7 @@ bool exportToPng = FALSE;
 GtkWidget* win;
 char pngPathName[512];
 char filePathName[512];
-double graphData[1000][10];
+double TextData[1000][10];
 bool fault = true;
 
 VectorXcd naponiCvorova(12);
@@ -262,12 +262,6 @@ Vector3d get_base_values(double sb, double vb) {
     return Vector3d(vb, ib, zb);
 }
 
-struct coordinates
-{
-    double x;
-    double y;
-};
-
 const char* getEntryText(GtkWidget* pEntry)
 {
     GtkEntryBuffer* buffer = gtk_entry_get_buffer(GTK_ENTRY(pEntry));
@@ -328,7 +322,13 @@ int dajEntryInt(GtkWidget* pEntry)
 void setEntryDbl(GtkWidget* pEntry, double val)
 {
     char tmp[64];
-    int n = sprintf(tmp, "%.3f", val);
+    int n = sprintf(tmp, "%.4f", val);
+    setEntryText(pEntry, tmp, n);
+}
+
+void setEntryCmplx(GtkWidget* pEntry, double real, double imag) {
+    char tmp[64];
+    int n = sprintf(tmp, "%.4f,%.4f", real, imag);
     setEntryText(pEntry, tmp, n);
 }
 
@@ -404,6 +404,11 @@ static void savePng()
 
 }
 
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// READING FROM THE FILE 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
 static void on_open_response(GtkDialog* dialog, int response)
 {
     int nRows, nCols;
@@ -412,12 +417,65 @@ static void on_open_response(GtkDialog* dialog, int response)
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
         GFile* file = gtk_file_chooser_get_file(chooser);
         const char* path = g_file_get_path(file);
-        if (loadData(path, graphData, &nRows, &nCols))
+        if (loadData(path, TextData, &nRows, &nCols))
         {
             g_object_unref(file);
             g_object_unref(dialog);
-            showData((GtkWindow*)win, "Podaci iz file-a", graphData, nRows, nCols);
+            showData((GtkWindow*)win, "Podaci iz file-a", TextData, nRows, nCols);
+            //
+            //varijable
 
+            // prenosna linija
+            setEntryDbl(unosLinR0, TextData[4][0]);
+            setEntryDbl(unosLinR1, TextData[6][0]);
+            setEntryDbl(unosLinX0, TextData[5][0]);
+            setEntryDbl(unosLinX1, TextData[7][0]);
+            setEntryDbl(unosLinC0, TextData[8][0]);
+            setEntryDbl(unosLinC1, TextData[9][0]);
+            setEntryDbl(unosLinL, TextData[10][0]);
+
+            //generator
+            setEntryDbl(unosGenLinNap, TextData[0][0]);
+            setEntryDbl(unosGenFi, TextData[1][0]);
+            setEntryDbl(unosGenR, TextData[2][0]);
+            setEntryDbl(unosGenX, TextData[3][0]);
+
+            izborTranSpoj = TextData[11][0];
+            gtk_combo_box_set_active(GTK_COMBO_BOX(tranSpoj), izborTranSpoj);
+            //transformator
+            setEntryDbl(unosTranNomSn, TextData[12][0]);
+            setEntryDbl(unosTranNomPr, TextData[13][0]);
+            setEntryDbl(unosTranNomSek, TextData[14][0]);
+            setEntryDbl(unosTranUk0, TextData[15][0]);
+            setEntryDbl(unosTranUk1, TextData[19][0]);
+            setEntryDbl(unosTranPcu0, TextData[16][0]);
+            setEntryDbl(unosTranPcu1, TextData[20][0]);
+            setEntryDbl(unosTranPfe0, TextData[18][0]);
+            setEntryDbl(unosTranPfe1, TextData[22][0]);
+            setEntryDbl(unosTranI00, TextData[17][0]);
+            setEntryDbl(unosTranI01, TextData[21][0]);
+            setEntryDbl(unosTranC, TextData[23][0]);
+            setEntryCmplx(unosTranZgi, TextData[24][0], TextData[25][0]);
+            setEntryCmplx(unosTranZgj, TextData[26][0], TextData[27][0]);
+
+            izborPotSpoj = TextData[28][0];
+            izborKondSpoj = TextData[37][0];
+            gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), izborPotSpoj);
+            gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), izborKondSpoj);
+
+            //potrosac
+            setEntryCmplx(unosPotZ1, TextData[29][0], TextData[30][0]);
+            setEntryCmplx(unosPotZ2, TextData[31][0], TextData[32][0]);
+            setEntryCmplx(unosPotZ3, TextData[33][0], TextData[34][0]);
+            setEntryCmplx(unosPotZg, TextData[35][0], TextData[36][0]);
+
+            izborKvar = TextData[39][0];
+            gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), izborKvar);
+            //ostalo
+            setEntryCmplx(unosKvarZ, TextData[40][0], TextData[41][0]);
+            setEntryDbl(unosKvarL, TextData[42][0]);
+            setEntryDbl(unosKondC, TextData[38][0]);
+            //
             return;
         }
         g_object_unref(file);
@@ -1067,7 +1125,7 @@ static void app_activate(GApplication* app, gpointer user_data)
     unosTranUk0 = gtk_entry_new();
     unosPotZg = gtk_entry_new();
     setEntryText(unosTranUk0, "11", 2);
-    setEntryText(unosPotZg, "0", 1);
+    setEntryText(unosPotZg, "0,0", 3);
     gtk_grid_attach(GTK_GRID(grid), tranUk0, 0, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), unosTranUk0, 1, i, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), potZg, 2, i, 1, 1);
