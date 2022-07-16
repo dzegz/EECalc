@@ -1,5 +1,21 @@
 #include "GraphFromFile.h"
 
+bool saveData(const char* filename, double A[1000][10], int nRows, int nCols){
+    FILE* dat = fopen(filename, "w");
+    if (!dat) {
+        printf("Greska prilikom otvaranja/kreiranja datoteke!");
+    }
+    else {
+        fprintf(dat, "43 1\n");
+        for (int i = 0; i < nRows; i++) {
+            for (int j = 0; j < nCols; j++) {
+                fprintf(dat, "%f\n", A[i][j]);
+            }
+        }
+        fclose(dat);
+    }
+    return true;
+}
 
 bool loadData(const char* filename, double A[1000][10], int* nRows, int* nCols)
 {

@@ -39,12 +39,12 @@ GtkWidget* unosKondC;
 // ostalo
 
 GtkWidget* colorBtnX, *colorBtnY;
-GtkWidget* area, * btnPng;
-bool exportToPng = FALSE;
+GtkWidget* btnExpTxt;
 GtkWidget* win;
-char pngPathName[512];
+char txtPathName[512];
 char filePathName[512];
 double TextData[1000][10];
+double DataText[1000][10];
 bool fault = true;
 
 VectorXcd naponiCvorova(12);
@@ -332,72 +332,151 @@ void setEntryCmplx(GtkWidget* pEntry, double real, double imag) {
 
 static void brisi(int width, int height)
 {
-    //empty = true;
-    gtk_widget_queue_draw(area);
+    //varijable
+
+    // prenosna linija
+    setEntryDbl(unosLinR0, 0);
+    setEntryDbl(unosLinR1, 0);
+    setEntryDbl(unosLinX0, 0);
+    setEntryDbl(unosLinX1, 0);
+    setEntryDbl(unosLinC0, 0);
+    setEntryDbl(unosLinC1, 0);
+    setEntryDbl(unosLinL, 0);
+
+    //generator
+    setEntryDbl(unosGenLinNap, 0);
+    setEntryDbl(unosGenFi, 0);
+    setEntryDbl(unosGenR, 0);
+    setEntryDbl(unosGenX, 0);
+
+    izborTranSpoj = 0;
+    gtk_combo_box_set_active(GTK_COMBO_BOX(tranSpoj), izborTranSpoj);
+    //transformator
+    setEntryDbl(unosTranNomSn, 0);
+    setEntryDbl(unosTranNomPr, 0);
+    setEntryDbl(unosTranNomSek, 0);
+    setEntryDbl(unosTranUk0, 0);
+    setEntryDbl(unosTranUk1, 0);
+    setEntryDbl(unosTranPcu0, 0);
+    setEntryDbl(unosTranPcu1, 0);
+    setEntryDbl(unosTranPfe0, 0);
+    setEntryDbl(unosTranPfe1, 0);
+    setEntryDbl(unosTranI00, 0);
+    setEntryDbl(unosTranI01, 0);
+    setEntryDbl(unosTranC, 0);
+    setEntryCmplx(unosTranZgi, 0, 0);
+    setEntryCmplx(unosTranZgj, 0, 0);
+
+    izborPotSpoj = 0;
+    izborKondSpoj = 0;
+    gtk_combo_box_set_active(GTK_COMBO_BOX(potSpoj), izborPotSpoj);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(kondSpoj), izborKondSpoj);
+
+    //potrosac
+    setEntryCmplx(unosPotZ1, 0, 0);
+    setEntryCmplx(unosPotZ2, 0, 0);
+    setEntryCmplx(unosPotZ3, 0, 0);
+    setEntryCmplx(unosPotZg, 0, 0);
+
+    izborKvar = 6;
+    gtk_combo_box_set_active(GTK_COMBO_BOX(tipKvar), izborKvar);
+    //ostalo
+    setEntryCmplx(unosKvarZ, 0, 0);
+    setEntryDbl(unosKvarL, 0);
+    setEntryDbl(unosKondC, 0);
+    
     return;
 }
 
 
-static void
-on_save_response(GtkNativeDialog* dialog,
-    int        response)
-{
+static void on_save_response(GtkNativeDialog* dialog, int response){
     if (response == GTK_RESPONSE_ACCEPT)
     {
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
         GFile* file = gtk_file_chooser_get_file(chooser);
-        //      pngPathName = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(dialog));
         const char* path = g_file_get_path(file);
-        strcpy(pngPathName, path);
+        strcpy(txtPathName, path);
+        saveData(txtPathName, DataText, 43, 1); 
         g_object_unref(file);
-        exportToPng = TRUE;
-        gtk_widget_queue_draw(area);
     }
     g_object_unref(dialog);
 }
 
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// EXPORTING DATA TO FILE 
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
-//static void savePng(int width, int height)
-//{
-//    //cairo_surface_t *surface;
-//    //surface = cairo_image_surface_create (CAIRO_FORMAT_RGB24, width, height);
-//    //cairo_surface_write_to_png (surface, "/Users/dzeni/Desktop/sine.png");
-//    GtkWidget *dialog;
-//
-//      dialog = gtk_file_chooser_dialog_new ("Select file",
-//                                            GTK_WINDOW (win),
-//                                            GTK_FILE_CHOOSER_ACTION_SAVE,
-//                                            "_Cancel", GTK_RESPONSE_CANCEL,
-//                                            "_Save", GTK_RESPONSE_OK,
-//                                            NULL);
-//      gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
-//      gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
-//      gtk_widget_show (dialog);
-//
-//      g_signal_connect (dialog, "response",
-//                        G_CALLBACK (on_save_response),
-//                        NULL);
-//
-//
-//}
 
-static void savePng()
-{
+static void saveTxt()
+{    
+    // loading data into DataText from entries
+    // prenosna linija
+    DataText[4][0] = dajEntryDbl(unosLinR0);
+    DataText[6][0] = dajEntryDbl(unosLinR1);
+    DataText[5][0] = dajEntryDbl(unosLinX0);
+    DataText[7][0] = dajEntryDbl(unosLinX1);
+    DataText[8][0] = dajEntryDbl(unosLinC0);
+    DataText[9][0] = dajEntryDbl(unosLinC1);
+    DataText[10][0] = dajEntryDbl(unosLinL);
 
-    //GtkFileChooserNative* dlg;
-    //GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
-    //dlg = gtk_file_chooser_native_new("Snimi graf", (GtkWindow*)win, action, "_Save", "_Cancel");
-    //g_signal_connect(dlg, "response",
-    //    G_CALLBACK(on_save_response),
-    //    NULL);
-    //gtk_native_dialog_show((GtkNativeDialog*)dlg);
+    //generator
+    DataText[0][0] = dajEntryDbl(unosGenLinNap);
+    DataText[1][0] = dajEntryDbl(unosGenFi);
+    DataText[2][0] = dajEntryDbl(unosGenR);
+    DataText[3][0] = dajEntryDbl(unosGenX);
+
+    //transformator
+    DataText[12][0] = dajEntryDbl(unosTranNomSn);
+    DataText[13][0] = dajEntryDbl(unosTranNomPr);
+    DataText[14][0] = dajEntryDbl(unosTranNomSek);
+    DataText[15][0] = dajEntryDbl(unosTranUk0);
+    DataText[19][0] = dajEntryDbl(unosTranUk1);
+    DataText[16][0] = dajEntryDbl(unosTranPcu0);
+    DataText[20][0] = dajEntryDbl(unosTranPcu1);
+    DataText[18][0] = dajEntryDbl(unosTranPfe0);
+    DataText[22][0] = dajEntryDbl(unosTranPfe1);
+    DataText[17][0] = dajEntryDbl(unosTranI00);
+    DataText[21][0] = dajEntryDbl(unosTranI01);
+    DataText[23][0] = dajEntryInt(unosTranC);
+    std::complex<double> tempzgi = dajEntryCmplx(unosTranZgi);
+    std::complex<double> tempzgj = dajEntryCmplx(unosTranZgj);
+    DataText[24][0] = tempzgi.real();
+    DataText[25][0] = tempzgi.imag();
+    DataText[26][0] = tempzgj.real();
+    DataText[27][0] = tempzgj.imag();
+
+    //potrosac
+    std::complex<double> tempZ1 = dajEntryCmplx(unosPotZ1);
+    std::complex<double> tempZ2 = dajEntryCmplx(unosPotZ2);
+    std::complex<double> tempZ3 = dajEntryCmplx(unosPotZ3);
+    std::complex<double> tempZg = dajEntryCmplx(unosPotZg);
+
+    DataText[29][0] = tempZ1.real();
+    DataText[30][0] = tempZ1.imag();
+    DataText[31][0] = tempZ2.real();
+    DataText[32][0] = tempZ2.imag();
+    DataText[33][0] = tempZ3.real();
+    DataText[34][0] = tempZ3.imag();
+    DataText[35][0] = tempZg.real();
+    DataText[36][0] = tempZg.imag();
+
+    //ostalo
+    std::complex<double> tempZf = dajEntryCmplx(unosKvarZ);
+    DataText[40][0] = tempZf.real();
+    DataText[41][0] = tempZf.imag();
+    DataText[42][0] = dajEntryDbl(unosKvarL);
+    DataText[38][0] = dajEntryDbl(unosKondC);
+
+    DataText[11][0] = izborTranSpoj;
+    DataText[28][0] = izborPotSpoj;
+    DataText[37][0] = izborKondSpoj;
+    DataText[39][0] = izborKvar;
+    //
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
     GtkFileChooserNative* dlg = gtk_file_chooser_native_new("Snimi graf", GTK_WINDOW(win), action, NULL, NULL);
-    //dlg = gtk_file_chooser_new("Snimi graf", (GtkWindow*)win, action, "_Save", "_Cancel");
-    g_signal_connect(dlg, "response",
-        G_CALLBACK(on_save_response),
-        NULL);
+
+    g_signal_connect(dlg, "response", G_CALLBACK(on_save_response), NULL);
     gtk_native_dialog_show((GtkNativeDialog*)dlg);
 
 }
@@ -507,7 +586,7 @@ void calculate_results() {
     double X1 = dajEntryDbl(unosLinX1);
     double C0 = dajEntryDbl(unosLinC0)/1000000;
     double C1 = dajEntryDbl(unosLinC1)/1000000;
-    double l = dajEntryDbl(unosLinL)*1000;
+    double l = dajEntryDbl(unosLinL);
 
     //generator
     double eg_ll = dajEntryDbl(unosGenLinNap)*1000;
@@ -548,7 +627,7 @@ void calculate_results() {
 
     //ostalo
     std::complex<double> Zf = dajEntryCmplx(unosKvarZ);
-    double udaljenostKvar = dajEntryDbl(unosKvarL)*1000;
+    double udaljenostKvar = dajEntryDbl(unosKvarL);
     double kondC = dajEntryDbl(unosKondC)/1000000000;
 
     //-------------------------------------------------------------------------------
@@ -683,7 +762,7 @@ void results_show(GtkWidget* p_widget, gpointer user_data) {
     
     //naponiCvorova = VectorXcd::Constant(12,0);
     calculate_results();
-    //gtk_widget_queue_draw(area);
+    
     GApplication* app = G_APPLICATION(user_data);
     
     //gtk_button_released(p_widget);
@@ -893,7 +972,7 @@ static void createToolBar(GtkWidget* boxToolBar)
 
     btnCrtaj = gtk_button_new_with_label("Izvrsi proracun");
     btnBrisi = gtk_button_new_with_label("Brisi");
-    btnPng  = gtk_button_new_with_label("Save as .png");
+    btnExpTxt  = gtk_button_new_with_label("Save as .txt");
     btnExit = gtk_button_new_with_label("Exit");
 
     GtkWidget* boxExport, * lblExport, * lblDraw, * lblDelete, * lblExit;
@@ -903,7 +982,7 @@ static void createToolBar(GtkWidget* boxToolBar)
     boxDelete = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
     boxExit = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
 
-    lblExport = gtk_label_new("Export to .png");
+    lblExport = gtk_label_new("Export to .txt");
     lblDraw = gtk_label_new("Izvrsi proracun");
     lblDelete = gtk_label_new("Brisi");
     lblExit = gtk_label_new("Open File");
@@ -919,19 +998,19 @@ static void createToolBar(GtkWidget* boxToolBar)
     //merganje
     gtk_button_set_child((GtkButton*)btnCrtaj, boxDraw);
     gtk_button_set_child((GtkButton*)btnBrisi, boxDelete);
-    gtk_button_set_child((GtkButton*)btnPng, boxExport);
+    gtk_button_set_child((GtkButton*)btnExpTxt, boxExport);
     gtk_button_set_child((GtkButton*)btnExit, boxExit);
 
     gtk_box_append((GtkBox*)boxToolBar, btnCrtaj);
     gtk_box_append((GtkBox*)boxToolBar, btnBrisi);
-    gtk_box_append((GtkBox*)boxToolBar, btnPng);
+    gtk_box_append((GtkBox*)boxToolBar, btnExpTxt);
     gtk_box_append((GtkBox*)boxToolBar, lblEmpty);
     gtk_box_append((GtkBox*)boxToolBar, btnExit);
 
     g_signal_connect(btnCrtaj, "clicked", G_CALLBACK(results_show), NULL);
     g_signal_connect(btnBrisi, "clicked", G_CALLBACK(brisi), NULL);
     g_signal_connect(btnExit, "clicked", G_CALLBACK(activate_open), NULL);
-    g_signal_connect(btnPng, "clicked", G_CALLBACK(savePng), NULL);
+    g_signal_connect(btnExpTxt, "clicked", G_CALLBACK(saveTxt), NULL);
 }
 
 
