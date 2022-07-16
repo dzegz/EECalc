@@ -195,9 +195,7 @@ Matrix3cd breakageModel(std::vector<std::string> type, std::complex<double> z, d
 
 }
 Matrix3cd loadModel(std::string type, std::complex<double> za, std::complex<double> zb, std::complex<double> zc, std::complex<double> zg, double  zbase) {
-    //ovdje kontam da treba napraviti preklapanje funckcija jer ne treba parametar zg ako je delta al haj opet kontam svakako se cita tamo iz gui-a pa
-    //samo mozemo ignorisati vrijednost, također ova fja ide i za kondenzatorsku bateriju, samosto je zg vazda nula ako je "star"
-
+   
     za /= zbase;
     zb /= zbase;
     zc /= zbase;
@@ -555,14 +553,9 @@ void calculate_results() {
 
     //-------------------------------------------------------------------------------
     // racun    
-    Matrix3cd T, Ti;
-    T << 1, 1, 1,
-        1, a, a* a,
-        1, a* a, a;
-    T *= (1 / 3.);
-    Ti = T.inverse();
+    
     ////////////////////////////
-    double sb = 1e6, v1b = Uni / sqrt(3), v2b = Unj / sqrt(3);
+    double sb = 1000000, v1b = Uni / sqrt(3), v2b = Unj / sqrt(3);
     //base values
     auto bv1 = get_base_values(sb, v1b);
     auto bv2 = get_base_values(sb, v2b);
@@ -593,23 +586,25 @@ void calculate_results() {
     else yc = loadModel("star", std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), std::complex<double>(0, std::pow(-w * kondC, -1)), 0, bv2(2));
 
     // test parametara zs i ysh
-    Vector2cd p, p2;
-    Matrix2cd y, y2, yy, yyy;
+    Vector2cd p0, p1;
+    Matrix2cd y, yy, yyy;
     if (pokus_primar) {
-        p = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "i", bv1(2), bv2(2)); // zs_x, ysh_x
+        p0 = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "i", bv1(2), bv2(2)); // zs_0, ysh_0
+        p1 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "i", bv1(2), bv2(2)); // zs_1, ysh_1
         //test Yij_0
-        y = xfmr_model_symm_0(satni_broj, p(0), p(1), zgi, zgj, "i", bv1(2), bv2(2)); // Ytransf_0
+        y = xfmr_model_symm_0(satni_broj, p0(0), p0(1), zgi, zgj, "i", bv1(2), bv2(2)); // Ytransf_0
         //test yij_12
-        yy = xfmr_model_symm_12(satni_broj, p(0), p(1), 1, "i"); // Ytransf_1
-        yyy = xfmr_model_symm_12(satni_broj, p(0), p(1), 2, "i"); // Ytransf_2
+        yy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 1, "i"); // Ytransf_1
+        yyy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 2, "i"); // Ytransf_2
     }
     else {
-        p2 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "j", bv1(2), bv2(2));
+        p0 = xfmr_sequence_params(Uni, Unj, Sn, uk0, pcu0, i00, pfe0, "j", bv1(2), bv2(2)); // zs_0, ysh_0
+        p1 = xfmr_sequence_params(Uni, Unj, Sn, uk1, pcu1, i01, pfe1, "j", bv1(2), bv2(2)); // zs_1, ysh_1
         //test Yij_0
-        y2 = xfmr_model_symm_0(satni_broj, p2(0), p2(1), zgi, zgj, "j", bv1(2), bv2(2));
+        y = xfmr_model_symm_0(satni_broj, p0(0), p0(1), zgi, zgj, "j", bv1(2), bv2(2));
         //test yij_12
-        yy = xfmr_model_symm_12(satni_broj, p2(0), p2(1), 1, "j");
-        yyy = xfmr_model_symm_12(satni_broj, p2(0), p2(1), 2, "j");
+        yy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 1, "j");
+        yyy = xfmr_model_symm_12(satni_broj, p1(0), p1(1), 2, "j");
     }
 
 
